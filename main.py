@@ -6,6 +6,7 @@ import collections
 from keras.models import Sequential
 from keras.layers.core import Dense, Activation
 from keras.optimizers import SGD
+import keras
 matplotlib.rcParams['figure.figsize'] = 16,12
 
 import chess
@@ -13,33 +14,29 @@ import chess.svg
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPM
 import imageio
+from tabulate import tabulate
+import math
+import time
+
+from chess_solver import solve_chess_problem
 
 def main():
-    image_color = load_image('images/all_standalone_chess_pieces.png')
-    #image_color = load_image('./board.png')
-    #display_image(image_color, "Original image")
+    print('Detecting board state from PNG...')
+    chess_board = board_from_png('./board.png')
+    print('Solving chess problem...')
+    start_time = time.time()
+    move_list = solve_chess_problem(chess_board)
+    end_time = time.time()
+    seconds = end_time - start_time
+    print(f'Solved in {seconds:.2f} seconds! Move list:')
+    for move in move_list:
+        print(move)
 
-    img = image_bin(image_gray(image_color))
-    #display_image(img, "Binary image")
-
-    #img_bin = erode(dilate(img))
-
-    #display_image(img_bin, "Dilated and eroded")
-
-    img = erode(img, (3, 3))
-    img = dilate(img, (3, 3))
-    #display_image(img, "Transformed")
-
-    marked_image, region_tuples = select_roi(image_color.copy(), img)
-    #display_image(selected_regions, "Regions of interest")
-
-    alphabet = ['black_queen', 'black_king', 'black_bishop', 'black_knight', 'black_rook', 'black_pawn',
+alphabet = ['black_queen', 'black_king', 'black_bishop', 'black_knight', 'black_rook', 'black_pawn',
                 'white_queen', 'white_king', 'white_bishop', 'white_knight', 'white_rook', 'white_pawn']
 
-    inputs = prepare_for_ann(region[0] for region in region_tuples)
-    outputs = convert_output(alphabet)
-    ann = create_ann(output_size=12)
-    ann = train_ann(ann, inputs, outputs, epochs=2000)
+def board_from_png(filePath):
+    ann = keras.models.load_model('model1')
 
     test_color = load_image('./board.png')
     test = image_bin(image_gray(test_color))
@@ -47,14 +44,94 @@ def main():
     test = dilate(test, (3, 3))
 
     marked_image, region_tuples = select_roi(test_color.copy(), test)
-    display_image(marked_image, 'Marked test image')
+    # display_image(marked_image, 'Marked test image')
 
     test_inputs = prepare_for_ann(region[0] for region in region_tuples)
     result = ann.predict(np.array(test_inputs, np.float32))
 
-    print("DETECTED CHESS PIECES:")
+    detected_pieces = []
     for i in range(len(test_inputs)):
-        print(f"{alphabet[winner(result[i])]}: [ {region_tuples[i][1]} ]")
+        detected_pieces.append((alphabet[winner(result[i])], region_tuples[i][1]))
+    #print("DETECTED CHESS PIECES:")
+    #for piece in detected_pieces:
+        #print(f"{piece[0]}: [ {piece[1]} ]")
+
+    board_array = [[None for i in range(8)] for j in range(8)]
+    image_size = test_color.shape
+    cell_size = (image_size[0] / 8, image_size[1] / 8)
+    for piece in detected_pieces:
+        bounding_rect = piece[1]
+        center_x = (bounding_rect[0] + bounding_rect[0] + bounding_rect[2]) / 2.0
+        center_y = (bounding_rect[1] + bounding_rect[1] + bounding_rect[3]) / 2.0
+        center_point = (center_x, center_y)
+
+        cell_x = math.floor(float(center_point[0]) / cell_size[0])
+        cell_y = math.floor(float(center_point[1]) / cell_size[1])
+        board_array[cell_y][cell_x] = piece[0]
+
+    #print(tabulate(board_array, tablefmt='grid'))
+
+    chess_board = chess.Board()
+    chess_board.clear()
+    for rowIndex in range(len(board_array)):
+        for colIndex in range(len(board_array[rowIndex])):
+            piece_name = board_array[rowIndex][colIndex]
+            if piece_name is None:
+                continue
+
+            chess_piece = chess_piece_from_name(piece_name)
+            chess_square = chess_square_from_coordinate(rowIndex, colIndex)
+            #print(f"{piece_name} is a {chess_piece} and should be at {chess_square}")
+
+            chess_board.set_piece_at(chess_square, chess_piece)
+    return chess_board
+
+def chess_piece_from_name(piece_name):
+    name_to_piece = {
+        'black_queen': chess.Piece(chess.QUEEN, chess.BLACK),
+        'black_king': chess.Piece(chess.KING, chess.BLACK),
+        'black_bishop': chess.Piece(chess.BISHOP, chess.BLACK),
+        'black_knight': chess.Piece(chess.KNIGHT, chess.BLACK),
+        'black_rook': chess.Piece(chess.ROOK, chess.BLACK),
+        'black_pawn': chess.Piece(chess.PAWN, chess.BLACK),
+        'white_queen': chess.Piece(chess.QUEEN, chess.WHITE),
+        'white_king': chess.Piece(chess.KING, chess.WHITE),
+        'white_bishop': chess.Piece(chess.BISHOP, chess.WHITE),
+        'white_knight': chess.Piece(chess.KNIGHT, chess.WHITE),
+        'white_rook': chess.Piece(chess.ROOK, chess.WHITE),
+        'white_pawn': chess.Piece(chess.PAWN, chess.WHITE),
+    }
+
+    return name_to_piece[piece_name]
+
+def chess_square_from_coordinate(rowIndex, colIndex):
+    return 63 - (rowIndex * 8 + (7 - colIndex))
+
+def train_model():
+    image_color = load_image('images/all_standalone_chess_pieces.png')
+    # image_color = load_image('./board.png')
+    # display_image(image_color, "Original image")
+
+    img = image_bin(image_gray(image_color))
+    # display_image(img, "Binary image")
+
+    # img_bin = erode(dilate(img))
+
+    # display_image(img_bin, "Dilated and eroded")
+
+    img = erode(img, (3, 3))
+    img = dilate(img, (3, 3))
+    # display_image(img, "Transformed")
+
+    marked_image, region_tuples = select_roi(image_color.copy(), img)
+    # display_image(selected_regions, "Regions of interest")
+
+    inputs = prepare_for_ann(region[0] for region in region_tuples)
+    outputs = convert_output(alphabet)
+    ann = create_ann(output_size=12)
+    ann = train_ann(ann, inputs, outputs, epochs=2000)
+
+    return ann
 
 def numbers_example():
     image_color = load_image('images/brojevi.png')
