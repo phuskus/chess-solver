@@ -15,34 +15,46 @@ from reportlab.graphics import renderPM
 import imageio
 
 def main():
-    image_color = load_image('images/standalone_chess_pieces.png')
-    display_image(image_color, "Original image")
+    image_color = load_image('images/all_standalone_chess_pieces.png')
+    #image_color = load_image('./board.png')
+    #display_image(image_color, "Original image")
 
     img = image_bin(image_gray(image_color))
-    display_image(img, "Binary image")
+    #display_image(img, "Binary image")
 
-    img_bin = erode(dilate(img))
-    display_image(img_bin, "Dilated and eroded")
+    #img_bin = erode(dilate(img))
 
-    selected_regions, numbers = select_roi(image_color.copy(), img_bin)
-    display_image(selected_regions, "Regions of interest")
+    #display_image(img_bin, "Dilated and eroded")
 
-    alphabet = ['pawn', 'king', 'knight', 'bishop', 'rook', 'queen']
+    img = erode(img, (3, 3))
+    img = dilate(img, (3, 3))
+    #display_image(img, "Transformed")
 
-    inputs = prepare_for_ann(numbers)
+    marked_image, region_tuples = select_roi(image_color.copy(), img)
+    #display_image(selected_regions, "Regions of interest")
+
+    alphabet = ['black_queen', 'black_king', 'black_bishop', 'black_knight', 'black_rook', 'black_pawn',
+                'white_queen', 'white_king', 'white_bishop', 'white_knight', 'white_rook', 'white_pawn']
+
+    inputs = prepare_for_ann(region[0] for region in region_tuples)
     outputs = convert_output(alphabet)
-    ann = create_ann(output_size=6)
+    ann = create_ann(output_size=12)
     ann = train_ann(ann, inputs, outputs, epochs=2000)
 
     test_color = load_image('./board.png')
     test = image_bin(image_gray(test_color))
-    test_bin = erode(dilate(test))
-    selected_test, test_numbers = select_roi(test_color.copy(), test_bin)
-    display_image(selected_test, 'Test image')
+    test = erode(test, (3, 3))
+    test = dilate(test, (3, 3))
 
-    test_inputs = prepare_for_ann(test_numbers)
+    marked_image, region_tuples = select_roi(test_color.copy(), test)
+    display_image(marked_image, 'Marked test image')
+
+    test_inputs = prepare_for_ann(region[0] for region in region_tuples)
     result = ann.predict(np.array(test_inputs, np.float32))
-    print(display_result(result, alphabet))
+
+    print("DETECTED CHESS PIECES:")
+    for i in range(len(test_inputs)):
+        print(f"{alphabet[winner(result[i])]}: [ {region_tuples[i][1]} ]")
 
 def numbers_example():
     image_color = load_image('images/brojevi.png')
@@ -87,26 +99,26 @@ def image_gray(image):
 def image_bin(image_gs):
     height, width = image_gs.shape[0:2]
     image_binary = np.ndarray((height, width), dtype=np.uint8)
-    ret, image_bin = cv2.threshold(image_gs, 127, 255, cv2.THRESH_BINARY)
+    ret, image_bin = cv2.threshold(image_gs, 90, 255, cv2.THRESH_BINARY)
     return image_bin
 
 def invert(image):
     return 255-image
 
 def display_image(image, title, color=False):
-    plt.title = title
+    plt.title(title)
     if color:
         plt.imshow(image)
     else:
         plt.imshow(image, 'gray')
     plt.show()
 
-def dilate(image):
-    kernel = np.ones((3, 3)) # strukturni element 3x3 blok
+def dilate(image, kernel_block=(3,3)):
+    kernel = np.ones(kernel_block) # strukturni element 3x3 blok
     return cv2.dilate(image, kernel, iterations=1)
 
-def erode(image):
-    kernel = np.ones((3, 3)) # strukturni element 3x3 blok
+def erode(image, kernel_block=(3,3)):
+    kernel = np.ones(kernel_block) # strukturni element 3x3 blok
     return cv2.erode(image, kernel, iterations=1)
 
 def resize_region(region):
@@ -120,7 +132,7 @@ def select_roi(image_orig, image_bin):
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)  # koordinate i velicina granicnog pravougaonika
         area = cv2.contourArea(contour)
-        if area > 100 and h < 50 and h > 10 and w > 10:
+        if w > 15 and h > 18 and w < 60 and h < 60:
             # kopirati [y:y+h+1, x:x+w+1] sa binarne slike i smestiti u novu sliku
             # oznaciti region pravougaonikom na originalnoj slici sa rectangle funkcijom
             region = image_bin[y:y + h + 1, x:x + w + 1]
@@ -128,8 +140,8 @@ def select_roi(image_orig, image_bin):
             cv2.rectangle(image_orig, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     regions_array = sorted(regions_array, key=lambda x: x[1][0])
-    sorted_regions = [region[0] for region in regions_array]
-    return image_orig, sorted_regions
+    #sorted_regions = [region[0] for region in regions_array]
+    return image_orig, regions_array
 
 def scale_to_range(image):
     return image/255
@@ -176,7 +188,7 @@ def winner(output):
 def display_result(outputs, alphabet):
     result = []
     for output in outputs:
-        result.append(alphabet[winner(output)])
+        result.append(f"{alphabet[winner(output)]}:")
     return result
 
 
