@@ -41,18 +41,29 @@ def board_from_png(filePath):
 
     return chess_board_from_array(board_array)
 
+def piece_from_file_name(file_name):
+    tokens = file_name.split("_")
+    del tokens[-1]
+    del tokens[-1]
+    piece = tokens[0]
+    for token in tokens[1:]:
+        piece += "_" + token
+    return piece
 
 def train_model():
-    image_color = load_image('images/all_standalone_chess_pieces.png')
-    img = transform_color_image(image_color)
+    training_images = []
+    training_labels = []
 
-    marked_image, region_tuples = select_roi(image_color.copy(), img)
-    #display_image(marked_image, "Regions of interest")
+    for file_name in os.listdir("training_data"):
+        label = piece_from_file_name(file_name)
+        image = load_image(f"training_data/{file_name}")
+        training_labels.append(label)
+        training_images.append(image)
 
-    inputs = prepare_for_ann(region[0] for region in region_tuples)
-    outputs = convert_output(alphabet)
+    inputs = prepare_for_ann(training_images)
+    outputs = convert_output(training_labels)
     ann = create_ann(output_size=12)
-    ann = train_ann(ann, inputs, outputs, epochs=2000)
+    ann = train_ann(ann, inputs, outputs, epochs=100)
 
     return ann
 
@@ -63,8 +74,8 @@ def select_roi(image_orig, image_bin):
     regions_array = []
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)  # koordinate i velicina granicnog pravougaonika
-        area = cv2.contourArea(contour)
-        if w > 15 and h > 18 and w < 60 and h < 60:
+        if w > 60 and h > 80 and w < 110 and h < 110:
+        #if True:
             # kopirati [y:y+h+1, x:x+w+1] sa binarne slike i smestiti u novu sliku
             # oznaciti region pravougaonikom na originalnoj slici sa rectangle funkcijom
             region = image_bin[y:y + h + 1, x:x + w + 1]

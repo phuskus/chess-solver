@@ -12,9 +12,7 @@ tf.get_logger().setLevel(logging.ERROR)
 
 from board_reader import *
 
-def run_tests(test_count):
-    generate_test_data(test_count)
-
+def run_tests():
     file_names = os.listdir("test_data")
     print("[ RUNNING TESTS ]")
     for file_name in file_names:
@@ -37,29 +35,31 @@ def run_tests(test_count):
         else:
             print("------------FAIL!")
 
-def generate_sanity_tests():
-    if not os.path.isdir("test_sanity"):
-        os.mkdir("test_sanity")
-
-    print("Generating sanity test for blank board...")
-    board_array = [[None for i in range(8)] for i in range(8)]
+def write_piece_from_board_array(board_array, file_path):
     board = chess_board_from_array(board_array)
-    write_board_png(board, f"test_sanity/blank_board.png")
-    with open("test_sanity/blank_board.fen", "w") as file:
-        file.write(board.fen())
+    write_board_png(board, file_path)
 
+    image_color = load_image(file_path)
+    piece_region = get_first_region(image_color)
+    save_image(file_path, piece_region)
+
+def get_first_region(image_color):
+    transformed = transform_color_image(image_color)
+    marked_image, region_tuples = select_roi(image_color.copy(), transformed)
+    return region_tuples[0][0]
+
+def generate_training_data():
+    if not os.path.isdir("training_data"):
+        os.mkdir("training_data")
 
     for piece_name in alphabet:
-        print(f"Generating sanity tests for {piece_name}...")
+        print(f"Generating training data for {piece_name}...")
         for i in range(8):
             for j in range(8):
                 board_array = [[None for i in range(8)] for i in range(8)]
                 board_array[i][j] = piece_name
-                board = chess_board_from_array(board_array)
-                write_board_png(board, f"test_sanity/{piece_name}_{i}_{j}.png")
-                with open(f"test_sanity/{piece_name}_{i}_{j}.fen", "w") as file:
-                    file.write(board.fen())
-    print("Done generating sanity tests!")
+                write_piece_from_board_array(board_array, f"training_data/{piece_name}_{i}_{j}.png")
+    print("Done generating training data!")
 
 def run_tests_sanity():
     file_names = os.listdir("test_sanity")

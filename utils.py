@@ -58,7 +58,7 @@ def chess_board_from_array(board_array):
     return chess_board
 
 def write_board_png(board, file_name):
-    svg_text = chess.svg.board(board, size=256)
+    svg_text = chess.svg.board(board, size=1024)
     svg_file = open('in.svg', 'w')
     svg_file.write(svg_text)
     svg_file.close()
@@ -67,7 +67,7 @@ def write_board_png(board, file_name):
     renderPM.drawToFile(svg, file_name)
 
     png = load_image(file_name)
-    cropped_png = png[10:246, 10:246]
+    cropped_png = png[40:984, 40:984]
     save_image(file_name, cropped_png)
 
 
@@ -76,8 +76,8 @@ def chess_square_from_coordinate(rowIndex, colIndex):
 
 def transform_color_image(img):
     img = image_bin(image_gray(img))
-    img = erode(img, (3, 3))
-    img = dilate(img, (3, 3))
+    img = erode(img, (5, 5))
+    #img = dilate(img, (5, 5))
     return img
 
 def load_image(path):
@@ -116,7 +116,7 @@ def erode(image, kernel_block=(3,3)):
     return cv2.erode(image, kernel, iterations=1)
 
 def resize_region(region):
-    return cv2.resize(region, (40, 40), interpolation=cv2.INTER_NEAREST)
+    return cv2.resize(region, (100, 100), interpolation=cv2.INTER_NEAREST)
 
 def scale_to_range(image):
     return image/255
@@ -124,24 +124,34 @@ def scale_to_range(image):
 def matrix_to_vector(image):
     return image.flatten()
 
-def prepare_for_ann(regions):
+def prepare_for_ann(images):
     ready_for_ann = []
-    for region in regions:
-        scale = scale_to_range(region)
+    for image in images:
+        scale = scale_to_range(image)
         ready_for_ann.append(matrix_to_vector(scale))
     return ready_for_ann
 
-def convert_output(alphabet):
+def convert_output_old(outputs):
     nn_outputs = []
-    for index in range(len(alphabet)):
-        output = np.zeros(len(alphabet))
+    for index in range(len(outputs)):
+        output = np.zeros(len(outputs))
         output[index] = 1
         nn_outputs.append(output)
     return np.array(nn_outputs)
 
+def convert_output(labels):
+    nn_outputs = []
+    for label in labels:
+        output_array = np.zeros(len(alphabet))
+        for i in range(len(alphabet)):
+            if alphabet[i] == label:
+                output_array[i] = 1
+        nn_outputs.append(output_array)
+    return nn_outputs
+
 def create_ann(output_size):
     ann = Sequential()
-    ann.add(Dense(128, input_dim=1600, activation='sigmoid'))
+    ann.add(Dense(128, input_dim=10000, activation='sigmoid'))
     ann.add(Dense(output_size, activation='sigmoid'))
     return ann
 
@@ -153,7 +163,7 @@ def train_ann(ann, X_train, y_train, epochs):
     print("\nTraining started...")
     sgd = SGD(lr=0.01, momentum=0.9)
     ann.compile(loss='mean_squared_error', optimizer=sgd)
-    ann.fit(X_train, y_train, epochs=epochs, batch_size=1, verbose=0, shuffle=False)
+    ann.fit(X_train, y_train, epochs=epochs, batch_size=1, verbose=1, shuffle=False)
     print("\nTraining completed...")
     return ann
 
