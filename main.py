@@ -19,14 +19,16 @@ def main():
     """
     arg1 - input PNG
     arg2 - turn [white | black]
+    arg3 - chess AI max think time
     """
-    sys.argv = ["", "board.png", "white"]
-    if len(sys.argv) < 3:
-        print("2 arguments are required: input png path and turn [white | black].")
+    #sys.argv = ["", "chess_problems/mate_in_4_0.png", "white", 0.2]
+    if len(sys.argv) < 4:
+        print("3 arguments are required: input png path, turn [white | black] and chess AI think time expressed in seconds.")
         return
 
     png_path = sys.argv[1]
     turn = sys.argv[2].lower()
+    think_time = sys.argv[3]
 
     if not png_path.lower().endswith(".png"):
         print("Invalid png path!")
@@ -37,19 +39,11 @@ def main():
         return
 
     chess_board = board_from_png(png_path)
-    solve_chess_problem(chess_board, turn == "white")
+    solve_chess_problem(chess_board, turn == "white", float(think_time))
 
 def train_and_save():
     ann = train_model()
     ann.save("model1")
-
-def debug_image_transform():
-    image_color = load_image("images/all_standalone_chess_pieces.png")
-    image_transformed = transform_color_image(image_color)
-    display_image(image_transformed, "Transformed")
-
-    marked_image, regions = select_roi(image_color.copy(), image_transformed)
-    display_image(marked_image, "Regions")
 
 if __name__ == "__main__":
     main()

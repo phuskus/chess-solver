@@ -3,15 +3,17 @@ import chess.engine
 import PySimpleGUI as sg
 from utils import *
 
-def solve_chess_problem(board, turn):
+def solve_chess_problem(board, turn, think_time):
     board.turn = turn
     engine = chess.engine.SimpleEngine.popen_uci("stockfish.exe")
     write_board_png_pretty(board, "temp_board.png", None)
 
     # Initialize GUI
-    window = sg.Window("Chess Genius", location=(0, 0), layout=[
+    window = sg.Window("Chess Genius", background_color="white", location=(0, 0), layout=[
         [sg.Image(key="-IMAGE-")],
-        [sg.Button("Next move", key="-NEXT_MOVE-"), sg.Text(key="-TURN_LABEL-", size=(40, 1)), sg.Text(key="-MOVE_LABEL-", size=(40, 1))]
+        [sg.Button("Next move", key="-NEXT_MOVE-"), 
+         sg.Text(key="-TURN_LABEL-", background_color="white", text_color="black", size=(40, 1)),
+         sg.Text(key="-MOVE_LABEL-", size=(40, 1), background_color="white", text_color="black",)]
     ], finalize=True)
 
     window["-IMAGE-"].update(filename="temp_board.png")
@@ -31,7 +33,7 @@ def solve_chess_problem(board, turn):
             break
 
         if event == "-NEXT_MOVE-":
-            result = engine.play(board, chess.engine.Limit(time=0.1))
+            result = engine.play(board, chess.engine.Limit(time=think_time))
             board.push(result.move)
             moveCount += 1
             if board.turn:
@@ -45,10 +47,10 @@ def solve_chess_problem(board, turn):
 
             if board.is_checkmate():
                 window["-NEXT_MOVE-"].update(disabled=True)
-                window["-TURN_LABEL-"].update("Checkmate!")
+                window["-TURN_LABEL-"].update("Checkmate!", text_color="green", font="bold")
             if board.is_stalemate():
                 window["-NEXT_MOVE-"].update(disabled=True)
-                window["-TURN_LABEL-"].update("Stalemate!")
+                window["-TURN_LABEL-"].update("Stalemate!", text_color="orange")
 
 
     window.close()

@@ -197,3 +197,18 @@ def get_random_board(empty_cell_chance):
 
 
     return chess_board_from_array(board_array)
+
+def convert_fen_to_png(fen_path, png_path):
+    board = chess.Board()
+    with open(fen_path, "r") as file:
+        board.set_fen(file.read())
+
+    write_board_png(board, png_path)
+
+def make_pngs_from_chess_problems():
+    for filename in os.listdir("chess_problems"):
+        if not filename.lower().endswith(".fen"):
+            continue
+        pngname = filename.split(".")[0] + ".png"
+        print(f"Making PNG from {filename}")
+        convert_fen_to_png(f"chess_problems/{filename}", f"chess_problems/{pngname}")
