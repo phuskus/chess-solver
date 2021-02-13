@@ -46,6 +46,9 @@ def solve_chess_problem(board, turn):
             if board.is_checkmate():
                 window["-NEXT_MOVE-"].update(disabled=True)
                 window["-TURN_LABEL-"].update("Checkmate!")
+            if board.is_stalemate():
+                window["-NEXT_MOVE-"].update(disabled=True)
+                window["-TURN_LABEL-"].update("Stalemate!")
 
 
     window.close()
