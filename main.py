@@ -12,9 +12,32 @@ tf.get_logger().setLevel(logging.ERROR)
 from chess_solver import solve_chess_problem
 from board_reader import *
 from testing import *
+import sys
+
 
 def main():
-    pass
+    """
+    arg1 - input PNG
+    arg2 - turn [white | black]
+    """
+    sys.argv = ["", "board.png", "white"]
+    if len(sys.argv) < 3:
+        print("2 arguments are required: input png path and turn [white | black].")
+        return
+
+    png_path = sys.argv[1]
+    turn = sys.argv[2].lower()
+
+    if not png_path.lower().endswith(".png"):
+        print("Invalid png path!")
+        return
+
+    if turn != "white" and turn != "black":
+        print("Turn must be 'white' or 'black'")
+        return
+
+    chess_board = board_from_png(png_path)
+    solve_chess_problem(chess_board, turn == "white")
 
 def train_and_save():
     ann = train_model()
@@ -27,15 +50,6 @@ def debug_image_transform():
 
     marked_image, regions = select_roi(image_color.copy(), image_transformed)
     display_image(marked_image, "Regions")
-
-def solve_board(board, white=True):
-    start_time = time.time()
-    move_list = solve_chess_problem(board)
-    end_time = time.time()
-    seconds = end_time - start_time
-    print(f'Solved in {seconds:.2f} seconds! Move list:')
-    for move in move_list:
-        print(move)
 
 if __name__ == "__main__":
     main()

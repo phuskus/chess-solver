@@ -70,6 +70,15 @@ def write_board_png(board, file_name):
     cropped_png = png[40:984, 40:984]
     save_image(file_name, cropped_png)
 
+def write_board_png_pretty(board, file_name, last_move):
+    svg_text = chess.svg.board(board=board, size=512, lastmove=last_move)
+    svg_file = open('in.svg', 'w')
+    svg_file.write(svg_text)
+    svg_file.close()
+
+    svg = svg2rlg('in.svg')
+    renderPM.drawToFile(svg, file_name)
+
 
 def chess_square_from_coordinate(rowIndex, colIndex):
     return 63 - (rowIndex * 8 + (7 - colIndex))
