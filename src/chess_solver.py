@@ -3,13 +3,18 @@ import chess.engine
 import PySimpleGUI as sg
 from utils import *
 
-def solve_chess_problem(board, turn, think_time):
+def solve_chess_problem(board, turn, think_time, opponent_skill):
+    print(f"Taking max {think_time} seconds per move...")
     board.turn = turn
-    engine = chess.engine.SimpleEngine.popen_uci("stockfish.exe")
+    my_engine = chess.engine.SimpleEngine.popen_uci("stockfish.exe")
+    my_engine.configure({ "Skill Level": 20 })
+    opponent_engine = chess.engine.SimpleEngine.popen_uci("stockfish.exe")
+    opponent_engine.configure({"Skill Level": opponent_skill})
+
     write_board_png_pretty(board, "temp_board.png", None)
 
     # Initialize GUI
-    window = sg.Window("Chess Genius", background_color="white", location=(0, 0), layout=[
+    window = sg.Window("NANDMaster", icon="window_icon.ico", background_color="white", location=(0, 0), layout=[
         [sg.Image(key="-IMAGE-")],
         [sg.Button("Next move", key="-NEXT_MOVE-"), 
          sg.Text(key="-TURN_LABEL-", background_color="white", text_color="black", size=(40, 1)),
@@ -33,7 +38,10 @@ def solve_chess_problem(board, turn, think_time):
             break
 
         if event == "-NEXT_MOVE-":
-            result = engine.play(board, chess.engine.Limit(time=think_time))
+            if board.turn == turn:
+                result = my_engine.play(board, chess.engine.Limit(time=think_time))
+            else:
+                result = opponent_engine.play(board, chess.engine.Limit(time=think_time))
             board.push(result.move)
             moveCount += 1
             if board.turn:
@@ -54,4 +62,5 @@ def solve_chess_problem(board, turn, think_time):
 
 
     window.close()
-    engine.quit()
+    my_engine.quit()
+    opponent_engine.quit()

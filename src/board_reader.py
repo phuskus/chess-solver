@@ -80,7 +80,7 @@ def select_roi(image_orig, image_bin):
             # oznaciti region pravougaonikom na originalnoj slici sa rectangle funkcijom
             region = image_bin[y:y + h + 1, x:x + w + 1]
             regions_array.append([resize_region(region), (x, y, w, h)])
-            cv2.rectangle(image_orig, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.rectangle(image_orig, (x, y), (x + w, y + h), color=(0, 255, 0, 255), thickness=10)
 
     regions_array = sorted(regions_array, key=lambda x: x[1][0])
     #sorted_regions = [region[0] for region in regions_array]
